@@ -10,7 +10,7 @@ import gdown
 import tempfile
 
 def download_model():
-    url = "https://drive.google.com/file/d/1zH-zgsuZQU9jverJg5us5w_2YvCJOIO0/view?usp=sharing"
+    url = "https://drive.google.com/file/d/1vc4b2RpeXmnZMn2SOF0snIjos9paVEVH/view?usp=sharing"
     output = "Trained_model.h5"
     gdown.download(url, output, quiet=False)
 
