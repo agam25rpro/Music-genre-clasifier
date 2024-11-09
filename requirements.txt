@@ -5,3 +5,4 @@ torch
 torchaudio
 plotly
 numpy
+gdown
