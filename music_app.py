@@ -75,7 +75,7 @@ def show_pie(values, labels, test_mp3):
             textfont=dict(
                 family="Arial, sans-serif",  # Font family
                 size=14,  # Font size
-                color="black",  # Font color
+                color="white",  # Font color
                 weight="bold"  # Make text bold
             )
         )
