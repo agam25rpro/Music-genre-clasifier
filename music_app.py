@@ -7,6 +7,7 @@ import torch
 import torchaudio
 import plotly.graph_objects as go
 import gdown
+import tempfile
 
 def download_model():
     url = "https://drive.google.com/file/d/1zH-zgsuZQU9jverJg5us5w_2YvCJOIO0/view?usp=sharing"
@@ -184,10 +185,10 @@ elif app_mode == 'Predict music genre':
     test_mp3 = st.file_uploader('', type=['mp3'])
 
     if test_mp3 is not None:
-        filepath = "test_data/" + test_mp3.name
-        with open(filepath, 'wb') as f:
-            f.write(test_mp3.getbuffer())
-        st.success(f"File {test_mp3.name} uploaded successfully!")
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp_file:
+            tmp_file.write(test_mp3.getbuffer())
+            filepath = tmp_file.name
+            st.success(f"File {test_mp3.name} uploaded successfully!")
 
     # Play audio
     if st.button("Play Audio") and test_mp3 is not None:
