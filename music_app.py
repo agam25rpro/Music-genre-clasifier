@@ -5,7 +5,6 @@ import librosa
 from tensorflow.image import resize
 import torch
 import torchaudio
-from matplotlib import pyplot as plt
 import plotly.graph_objects as go
 import gdown
 
