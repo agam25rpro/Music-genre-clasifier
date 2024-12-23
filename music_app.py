@@ -10,9 +10,12 @@ import gdown
 import tempfile
 
 def download_model():
-    url = "https://drive.google.com/uc?export=download&id=1vc4b2RpeXmnZMn2SOF0snIjos9paVEVH"
-    output = "Trained_model.h5"
-    gdown.download(url, output, quiet=False)
+    model_path = "Trained_model.h5"
+    if not os.path.exists(model_path):
+        url = "https://drive.google.com/uc?export=download&id=1vc4b2RpeXmnZMn2SOF0snIjos9paVEVH"
+        gdown.download(url, model_path, quiet=False)
+    return model_path
+
 
 # Load the model after downloading
 def load_model():
@@ -47,8 +50,8 @@ def load_and_preprocess_file(file_path, target_shape=(210,210)):
     return np.array(data).reshape(-1, target_shape[0], target_shape[1], 1)
 
 # Predict values
+model = load_model()
 def model_prediction(x_test):
-    model = load_model()
     y_pred = model.predict(x_test)
     predicted_cats = np.argmax(y_pred, axis=1)
     unique_elements, counts = np.unique(predicted_cats, return_counts=True)
