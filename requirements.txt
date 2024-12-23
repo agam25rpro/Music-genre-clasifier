@@ -6,6 +6,4 @@ torchaudio
 plotly
 numpy
 gdown
-fastapi
-uvicorn
-python-multipart
+
