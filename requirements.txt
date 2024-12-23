@@ -6,4 +6,3 @@ torchaudio
 plotly
 numpy
 gdown
-os
