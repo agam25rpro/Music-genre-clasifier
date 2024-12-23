@@ -10,13 +10,10 @@ import gdown
 import tempfile
 
 def download_model():
-    model_path = "Trained_model.h5"
-    if not os.path.exists(model_path):
-        url = "https://drive.google.com/uc?export=download&id=1vc4b2RpeXmnZMn2SOF0snIjos9paVEVH"
-        gdown.download(url, model_path, quiet=False)
-    return model_path
-
-
+    url = "https://drive.google.com/uc?export=download&id=1vc4b2RpeXmnZMn2SOF0snIjos9paVEVH"
+    output = "Trained_model.h5"
+    gdown.download(url, output, quiet=False)
+    
 # Load the model after downloading
 def load_model():
     download_model()
