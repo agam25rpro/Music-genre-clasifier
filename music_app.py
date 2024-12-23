@@ -8,12 +8,6 @@ import torchaudio
 import plotly.graph_objects as go
 import gdown
 import tempfile
-from fastapi import FastAPI, UploadFile, File
-import uvicorn
-import io
-
-# Initialize FastAPI app
-app = FastAPI()
 
 def download_model():
     url = "https://drive.google.com/uc?export=download&id=1vc4b2RpeXmnZMn2SOF0snIjos9paVEVH"
@@ -27,7 +21,8 @@ def load_model():
     return model
 
 # Preprocess source file
-def load_and_preprocess_file(file_path, target_shape=(210, 210)):
+# Preprocess source file
+def load_and_preprocess_file(file_path, target_shape=(210,210)):
     data = []
     audio_data, sample_rate = librosa.load(file_path, sr=None)
     chunk_duration = 4
@@ -109,52 +104,102 @@ def show_pie(values, labels, test_mp3):
     # Show the plot in Streamlit
     st.plotly_chart(fig)
 
-# FastAPI route to predict genre from uploaded audio file
-@app.post("/predict/")
-async def predict(file: UploadFile = File(...)):
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp_file:
-        tmp_file.write(file.file.read())
-        filepath = tmp_file.name
-        X_test = load_and_preprocess_file(filepath)
-        labels, values, c_index = model_prediction(X_test)
-        return {"genre": labels, "values": values.tolist(), "genre_name": str(labels[0])}
 
-# Streamlit frontend
-def streamlit_ui():
-    # Sidebar UI
-    st.sidebar.title("Dashboard")
-    app_mode = st.sidebar.selectbox("Select page", ["About app", "How it works?", "Predict music genre"])
+# Sidebar UI
+st.sidebar.title("Dashboard")
+app_mode = st.sidebar.selectbox("Select page", ["About app", "How it works?", "Predict music genre"])
 
-    if app_mode == "About app":
-        st.markdown("**About app**")
-        # Add About app information here
+# Main page
+if app_mode == "About app":
+    st.markdown(
+        """
+        <style>
+        .stapp {
+            background-color: #0E1117;
+            color: white;
+        }
+        h2 {
+            color: #00BFFF; /* Deep Sky Blue for main title */
+            font-size: 36px;
+            font-weight: bold;
+        }
+        h3 {
+            color: #32CD32; /* Light Blue for subtitles */
+            font-size: 28px;
+        }
+        p {
+            color: #f0f8ff; /* Light Gray for text */
+            font-size: 18px;
+        }
+        .stmarkdown {
+            color: #f0f8ff;
+        }
+        .stimage {
+            border-radius: 15px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-    elif app_mode == "How it works?":
-        st.markdown("**How it works?**")
-        # Add How it works information here
+    st.markdown('''## Welcome to the,''')
+    st.markdown('''## Music Genre Classifier 🎶🎧''')
+    image_path = "music_genre_home.png"
+    st.image(image_path, width=350)
 
-    elif app_mode == 'Predict music genre':
-        st.header("**_Predict Music Genre_**")
-        st.markdown('##### Upload the audio file (mp3 format)')
-        test_mp3 = st.file_uploader('', type=['mp3'])
+    st.markdown("""
+    ## Welcome to the Music Genre Classifier, an AI-powered app designed to help you explore and categorize music with ease! ✨
+                
+    Leveraging deep learning (DL) techniques, this app automatically analyzes your music tracks and classifies them into various genres with impressive accuracy.
 
-        if test_mp3 is not None:
-            st.audio(test_mp3)
+    Whether you’re a music enthusiast, a DJ, or just someone who loves discovering new tunes, this app brings AI to your fingertips, transforming how you interact with music. Simply upload a song, and within seconds, our advanced model will determine the genre, providing you with a seamless and intuitive music discovery experience.
 
-        # Predict
-        if st.button("Know Genre") and test_mp3 is not None:
-            with st.spinner("Please wait ..."):
-                result = model_prediction(test_mp3)
-                st.snow()
-                show_pie(result['values'], result['labels'], test_mp3)
+    ### **Key Features: 💪**
 
-# Run both FastAPI and Streamlit together
-def main():
-    import threading
-    # Run Streamlit UI in a separate thread
-    threading.Thread(target=streamlit_ui).start()
-    # Run FastAPI in the main thread
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    AI-Powered Music Classification: Built using deep learning, our app accurately classifies music into multiple genres.
+                
+    Fast & Easy: Upload a track, and let the app work its magic in seconds.
+                
+    Explore New Music: Find genres you might not have explored before and discover new favorites.
+                
+    User-Friendly Interface: An easy-to-use design makes classifying your music a breeze.
+                
+    #### Let our deep learning model do the heavy lifting while you enjoy the world of music in a whole new way! 🎧
 
-if __name__ == "__main__":
-    main()
+    (_P.S. -> It is an AI model so it may give wrong predictions too_)
+    """)
+
+elif app_mode == "How it works?":
+    st.markdown("""
+    # How to know the music genre?
+    **1. Upload music: Start off with uploading the music file**\n
+    **2. Analysis: Our system will process the music file with advanced algorithms to classify it into a number of genres**\n
+    **3. Results: After the analysis phase, you will get a pie chart depicting the percentage of genres the music belongs to (A music is not purely a single genre)**
+
+    #### _P.S. -> You can also listen to the music in the app itself_
+    """)
+
+elif app_mode == 'Predict music genre':
+    st.header("**_Predict Music Genre_**")
+    st.markdown('##### Upload the audio file (mp3 format)')
+    test_mp3 = st.file_uploader('', type=['mp3'])
+
+    if test_mp3 is not None:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp_file:
+            tmp_file.write(test_mp3.getbuffer())
+            filepath = tmp_file.name
+            st.success(f"File {test_mp3.name} uploaded successfully!")
+
+    # Play audio
+    if st.button("Play Audio") and test_mp3 is not None:
+        st.audio(test_mp3)
+
+    # Predict
+    if st.button("Know Genre") and test_mp3 is not None:
+        with st.spinner("Please wait ..."):
+            X_test = load_and_preprocess_file(filepath)
+            labels, values, c_index = model_prediction(X_test)
+            st.snow()
+            st.markdown("The music genre is : ")
+            show_pie(values, labels, test_mp3)
+should I edit in this 
