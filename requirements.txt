@@ -6,3 +6,4 @@ torchaudio
 plotly
 numpy
 gdown
+gunicorn==21.2.0
