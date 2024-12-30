@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Genre Classifier</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #2D2A5D, #00BFFF, #8A2BE2);
+            color: white;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .container {
+            margin-top: 40px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            overflow: hidden;
+        }
+        h1 {
+            color: #00BFFF;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+        }
+        .btn-primary {
+            background-color: #007ACC;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 25px;
+            font-size: 1.1rem;
+            transition: background-color 0.3s ease-in-out;
+        }
+        .btn-primary:hover {
+            background-color: #00BFFF;
+        }
+        .form-control {
+            background-color: #1C1C1C;
+            border: 1px solid #333;
+            color: white;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 1.1rem;
+            transition: border-color 0.3s ease-in-out;
+        }
+        .form-control:focus {
+            border-color: #00BFFF;
+        }
+        .result {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1000px;
+        }
+        .error {
+            color: #FF6347;
+            font-size: 1.2rem;
+        }
+        .footer {
+            text-align: center;
+            color: #00BFFF;
+            font-size: 1rem;
+            padding: 20px;
+            margin-top: 30px;
+            z-index: 2;
+        }
+        #particles-js {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .genre-description {
+            background-color: #2D2A5D;
+            padding: 10px;
+            border-radius: 10px;
+            width: 45%;
+            font-size: 1.1rem;
+            margin-left: 20px;
+            margin-right: 20px;  /* Added right margin */
+            margin-top: 0px;  /* Added top margin */
+            margin-bottom: 20px;  /* Added bottom margin */
+            box-sizing: border-box; /* Ensures padding doesn't affect width */
+            overflow: hidden; /* Prevents scrollbars */
+        }
+        .genre-description h4 {
+            color: #00BFFF;
+        }
+        .genre-description p {
+            color: #D3D3D3;
+            font-size: 1rem; /* Adjusted font size */
+        }
+        #chart {
+            width: 45%;
+            height: 400px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+    <div class="container text-center">
+        <h1 class="mb-4">Music Genre Classifier 🎼</h1>
+        <p>This tool predicts the genre of any MP3 audio file you upload. It helps to classify your music and understand the genre distribution.</p>
+        
+        <form action="/predict" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <input type="file" name="audio" class="form-control" accept=".mp3" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Predict Genre</button>
+        </form>
+
+        <div class="result mt-4">
+            {% if genre_prediction %}
+                <div class="d-flex">
+                    <div id="chart"></div>
+                    <div class="genre-description">
+                        <h4>Popular Music Genres:</h4>
+                        <p><strong>Pop:</strong> A genre that focuses on catchy melodies and lyrics, appealing to a wide audience.</p>
+                        <p><strong>Rock:</strong> Known for its use of electric guitars, drums, and strong rhythms.</p>
+                        <p><strong>Jazz:</strong> Emphasizes improvisation, complex rhythms, and a blend of melodies.</p>
+                        <p><strong>Classical:</strong> Rich in harmony, structure, and orchestration, often instrumental.</p>
+                        <p><strong>Hip-Hop:</strong> Features rhythm-based lyrics, often rapped, with strong beats and basslines.</p>
+                    </div>
+                </div>
+                <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+                <script>
+                    var data = [
+                        {
+                            values: {{ pie_values | safe }},
+                            labels: {{ pie_labels | safe }},
+                            type: 'pie',
+                            hole: 0.3,
+                            textinfo: 'label+percent',
+                            pull: Array({{ pie_values | length }}).fill(0).map((_, i) => i === 0 ? 0.2 : 0),
+                            marker: {
+                                colors: ['#2D2A5D', '#8A2BE2', '#00BFFF', '#007ACC', '#4B0082']
+                            }
+                        }
+                    ];
+
+                    var layout = {
+                        title: "Genre Distribution",
+                        height: 400,
+                        width: 400,
+                        paper_bgcolor: '#0E1117',
+                        font: {
+                            color: "white"
+                        },
+                        plot_bgcolor: '#0E1117',
+                        showlegend: false,
+                        titlefont: {
+                            size: 24,
+                            color: '#00BFFF'
+                        }
+                    };
+
+                    Plotly.newPlot('chart', data, layout);
+                </script>
+            {% endif %}
+
+            {% if error_message %}
+                <div class="error">{{ error_message }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script>
+        particlesJS('particles-js', {
+            "particles": {
+                "number": {
+                    "value": 100,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#00BFFF"
+                },
+                "shape": {
+                    "type": "circle",
+                    "stroke": {
+                        "width": 0,
+                        "color": "#00BFFF"
+                    }
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": true,
+                    "anim": {
+                        "enable": true,
+                        "speed": 1,
+                        "opacity_min": 0.1
+                    }
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                    "anim": {
+                        "enable": true,
+                        "speed": 40,
+                        "size_min": 0.1
+                    }
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#00BFFF",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 4,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false
+                }
+            },
+            "interactivity": {
+                "detect_on": "window",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "repulse"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    }
+                }
+            }
+        });
+    </script>
+    <div class="footer">
+        <p>&copy; 2024 Music Genre Classifier. All rights reserved.</p>
+    </div>
+</body>
+</html>
