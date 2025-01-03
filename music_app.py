@@ -29,15 +29,14 @@ model = load_model()
 
 # Preprocess source file
 def load_and_preprocess_file(file_path, target_shape=(210, 210)):
-    data = []
     audio_data, sample_rate = librosa.load(file_path, sr=None)
-    chunk_duration = 4
-    overlap_duration = 2
+    chunk_duration = 4  # Duration of each chunk in seconds
+    overlap_duration = 2  # Duration of overlap in seconds
     chunk_samples = chunk_duration * sample_rate
     overlap_samples = overlap_duration * sample_rate
     num_chunks = int(np.ceil((len(audio_data) - chunk_samples) / (chunk_samples - overlap_samples))) + 1
 
-    # Process and predict chunks one by one
+    # Process and predict chunks one by one to save memory
     for i in range(num_chunks):
         start = i * (chunk_samples - overlap_samples)
         end = start + chunk_samples
@@ -46,14 +45,13 @@ def load_and_preprocess_file(file_path, target_shape=(210, 210)):
         # Convert chunk to Mel Spectrogram
         mel_spectrogram = torchaudio.transforms.MelSpectrogram()(torch.tensor(chunk).unsqueeze(0)).numpy()
 
-        # Resize matrix based on provided target shape
-        mel_spectrogram = resize(np.expand_dims(mel_spectrogram, axis=-1), target_shape)
+        # Resize matrix using TensorFlow's resize function
+        mel_spectrogram = resize(tf.convert_to_tensor(np.expand_dims(mel_spectrogram, axis=-1), dtype=tf.float32), target_shape)
 
-        # Instead of appending, process chunk and predict directly
-        x_test = mel_spectrogram.reshape(1, target_shape[0], target_shape[1], 1)
-        yield x_test  # Yielding the preprocessed data for prediction to save memory
+        # Yield preprocessed chunk for prediction (to save memory)
+        yield tf.reshape(mel_spectrogram, (1, target_shape[0], target_shape[1], 1))
 
-# Predict values
+# Predict values from the model
 def model_prediction(x_test):
     y_pred = model.predict(x_test)
     predicted_cats = np.argmax(y_pred, axis=1)
