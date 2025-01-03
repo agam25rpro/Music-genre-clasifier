@@ -9,56 +9,64 @@ import plotly.graph_objects as go
 import gdown
 import os
 import tempfile
+from threading import Thread
 
 app = Flask(__name__)
 
-# Download and load the model
+# Download and load the model once, if not already downloaded
+MODEL_PATH = "Trained_model.h5"
+
 def download_model():
-    url = "https://drive.google.com/uc?export=download&id=1vc4b2RpeXmnZMn2SOF0snIjos9paVEVH"
-    output = "Trained_model.h5"
-    if not os.path.exists(output):
-        gdown.download(url, output, quiet=False)
+    if not os.path.exists(MODEL_PATH):
+        url = "https://drive.google.com/uc?export=download&id=1vc4b2RpeXmnZMn2SOF0snIjos9paVEVH"
+        gdown.download(url, MODEL_PATH, quiet=False)
 
 def load_model():
     download_model()
-    model = tf.keras.models.load_model("Trained_model.h5")
+    model = tf.keras.models.load_model(MODEL_PATH)
     return model
 
-# Load the model once and reuse it
+# Load model globally
 model = load_model()
 
 # Preprocess source file
 def load_and_preprocess_file(file_path, target_shape=(210, 210)):
-    audio_data, sample_rate = librosa.load(file_path, sr=None)
-    chunk_duration = 4  # Duration of each chunk in seconds
-    overlap_duration = 2  # Duration of overlap in seconds
-    chunk_samples = chunk_duration * sample_rate
-    overlap_samples = overlap_duration * sample_rate
-    num_chunks = int(np.ceil((len(audio_data) - chunk_samples) / (chunk_samples - overlap_samples))) + 1
+    try:
+        audio_data, sample_rate = librosa.load(file_path, sr=None)
+        chunk_duration = 4  # Duration of each chunk in seconds
+        overlap_duration = 2  # Duration of overlap in seconds
+        chunk_samples = chunk_duration * sample_rate
+        overlap_samples = overlap_duration * sample_rate
+        num_chunks = int(np.ceil((len(audio_data) - chunk_samples) / (chunk_samples - overlap_samples))) + 1
 
-    # Process and predict chunks one by one to save memory
-    for i in range(num_chunks):
-        start = i * (chunk_samples - overlap_samples)
-        end = start + chunk_samples
-        chunk = audio_data[start:end]
+        # Process and predict chunks one by one to save memory
+        for i in range(num_chunks):
+            start = i * (chunk_samples - overlap_samples)
+            end = start + chunk_samples
+            chunk = audio_data[start:end]
 
-        # Convert chunk to Mel Spectrogram
-        mel_spectrogram = torchaudio.transforms.MelSpectrogram()(torch.tensor(chunk).unsqueeze(0)).numpy()
+            # Convert chunk to Mel Spectrogram
+            mel_spectrogram = torchaudio.transforms.MelSpectrogram()(torch.tensor(chunk).unsqueeze(0)).numpy()
 
-        # Resize matrix using TensorFlow's resize function
-        mel_spectrogram = resize(tf.convert_to_tensor(np.expand_dims(mel_spectrogram, axis=-1), dtype=tf.float32), target_shape)
+            # Resize matrix using TensorFlow's resize function
+            mel_spectrogram = resize(tf.convert_to_tensor(np.expand_dims(mel_spectrogram, axis=-1), dtype=tf.float32), target_shape)
 
-        # Yield preprocessed chunk for prediction (to save memory)
-        yield tf.reshape(mel_spectrogram, (1, target_shape[0], target_shape[1], 1))
+            # Yield preprocessed chunk for prediction (to save memory)
+            yield tf.reshape(mel_spectrogram, (1, target_shape[0], target_shape[1], 1))
+    except Exception as e:
+        raise Exception(f"Error in file preprocessing: {str(e)}")
 
 # Predict values from the model
 def model_prediction(x_test):
-    y_pred = model.predict(x_test)
-    predicted_cats = np.argmax(y_pred, axis=1)
-    unique_elements, counts = np.unique(predicted_cats, return_counts=True)
-    max_count = np.max(counts)
-    max_elements = unique_elements[counts == max_count]
-    return unique_elements, counts, max_elements[0]
+    try:
+        y_pred = model.predict(x_test)
+        predicted_cats = np.argmax(y_pred, axis=1)
+        unique_elements, counts = np.unique(predicted_cats, return_counts=True)
+        max_count = np.max(counts)
+        max_elements = unique_elements[counts == max_count]
+        return unique_elements, counts, max_elements[0]
+    except Exception as e:
+        raise Exception(f"Error in model prediction: {str(e)}")
 
 # Flask Routes
 @app.route('/')
@@ -107,7 +115,7 @@ def predict():
             pie_labels=genre_labels
         )
     except Exception as e:
-        return render_template('index.html', error_message=str(e))
+        return render_template('index.html', error_message=f"An error occurred: {str(e)}")
 
 if __name__ == '__main__':
     app.run(debug=True)
