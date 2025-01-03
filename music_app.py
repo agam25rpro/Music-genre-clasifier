@@ -24,6 +24,7 @@ def load_model():
     model = tf.keras.models.load_model("Trained_model.h5")
     return model
 
+# Load the model once and reuse it
 model = load_model()
 
 # Preprocess source file
@@ -36,6 +37,7 @@ def load_and_preprocess_file(file_path, target_shape=(210, 210)):
     overlap_samples = overlap_duration * sample_rate
     num_chunks = int(np.ceil((len(audio_data) - chunk_samples) / (chunk_samples - overlap_samples))) + 1
 
+    # Process and predict chunks one by one
     for i in range(num_chunks):
         start = i * (chunk_samples - overlap_samples)
         end = start + chunk_samples
@@ -46,9 +48,10 @@ def load_and_preprocess_file(file_path, target_shape=(210, 210)):
 
         # Resize matrix based on provided target shape
         mel_spectrogram = resize(np.expand_dims(mel_spectrogram, axis=-1), target_shape)
-        data.append(mel_spectrogram)
 
-    return np.array(data).reshape(-1, target_shape[0], target_shape[1], 1)
+        # Instead of appending, process chunk and predict directly
+        x_test = mel_spectrogram.reshape(1, target_shape[0], target_shape[1], 1)
+        yield x_test  # Yielding the preprocessed data for prediction to save memory
 
 # Predict values
 def model_prediction(x_test):
@@ -79,24 +82,30 @@ def predict():
             file.save(tmp_file.name)
             filepath = tmp_file.name
 
-        # Preprocess the audio file and predict genre
-        x_test = load_and_preprocess_file(filepath)
-        labels, values, c_index = model_prediction(x_test)
+        # Initialize variables for predictions
+        all_labels = []
+        all_values = []
+
+        # Preprocess the audio file and predict genre chunk by chunk
+        for x_test in load_and_preprocess_file(filepath):
+            labels, values, c_index = model_prediction(x_test)
+            all_labels.extend(labels)
+            all_values.extend(values)
 
         # Genre classes
         classes = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
         genre = classes[c_index]  # Predicted genre
 
         # Prepare data for the pie chart
-        genre_labels = [classes[i] for i in labels]
-        
+        genre_labels = [classes[i] for i in all_labels]
+
         # Remove the temporary file
         os.remove(filepath)
 
         return render_template(
             'index.html',
             genre_prediction=genre,
-            pie_values=values.tolist(),
+            pie_values=all_values,
             pie_labels=genre_labels
         )
     except Exception as e:
